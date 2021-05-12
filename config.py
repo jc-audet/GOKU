@@ -29,7 +29,6 @@ def load_goku_train_config(args):
         args.mini_batch_size = 64
         args.seq_len = 50
         args.delta_t = 0.05
-        args.data_path = 'data/pendulum/'
         args.norm = 'zero_to_one'
         args.kl_annealing_epochs = 200
         args.kl_start_af = 0.00001
@@ -41,7 +40,6 @@ def load_goku_train_config(args):
         args.mini_batch_size = 64
         args.seq_len = 50
         args.delta_t = 0.05
-        args.data_path = 'data/double_pendulum/'
         args.norm = 'zero_to_one'
         args.kl_annealing_epochs = 200
         args.kl_start_af = 0.00001
@@ -53,7 +51,6 @@ def load_goku_train_config(args):
         args.mini_batch_size = 64
         args.seq_len = 50
         args.delta_t = 0.05
-        args.data_path = 'data/pendulum_friction/'
         args.norm = 'zero_to_one'
         args.kl_annealing_epochs = 200
         args.kl_start_af = 0.00001
@@ -65,7 +62,6 @@ def load_goku_train_config(args):
         args.mini_batch_size = 128
         args.seq_len = 200
         args.delta_t = 1.0
-        args.data_path = 'data/cvs/'
         args.model = 'cvs'
         args.kl_annealing_epochs = 200
         args.kl_start_af = 0.00001

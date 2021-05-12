@@ -141,9 +141,9 @@ if __name__ == '__main__':
         pure_args = load_data_config(args)
 
         if args.model == 'pendulum':
-            args.save_path = os.path.join(args.output_dir, 'pure_pendulum') if not args.friction else os.path.join(args.output_dir, 'pure_pendulum_friction')
+            args.save_path = os.path.join(args.output_dir, 'pure_pendulum/') if not args.friction else os.path.join(args.output_dir, 'pure_pendulum_friction/')
         else:
-            args.save_path = os.path.join(args.output_dir, 'pure_' + args.model)
+            args.save_path = os.path.join(args.output_dir, 'pure_' + args.model + '/')
 
         args.seed = args.seed
         
@@ -164,9 +164,9 @@ if __name__ == '__main__':
         noisy_args = load_data_config(args)
 
         if args.model == 'pendulum':
-            args.save_path = os.path.join(args.output_dir, 'noisy_pendulum') if not args.friction else os.path.join(args.output_dir, 'noisy_pendulum_friction')
+            args.save_path = os.path.join(args.output_dir, 'noisy_pendulum/') if not args.friction else os.path.join(args.output_dir, 'noisy_pendulum_friction/')
         else:
-            args.save_path = os.path.join(args.output_dir, 'noisy_' + args.model)
+            args.save_path = os.path.join(args.output_dir, 'noisy_' + args.model + '/')
             
         # Change size
         args.data_size = 500

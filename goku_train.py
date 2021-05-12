@@ -55,7 +55,7 @@ def validate_goku(args, model, val_dataloader, device):
             predicted_batch, _, _, _, _, _, _, _, _ = model(val_batch, t=t_arr, variational=False)
             val_loss = ((predicted_batch - val_batch)**2).mean((0, 1)).sum()
 
-            plot_samples(predicted_batch, val_batch, 'val_sample.png')
+            # plot_samples(predicted_batch, val_batch, 'val_sample.png')
 
     model.train()
     return val_loss
@@ -66,7 +66,7 @@ def compute_losses(args, epoch, i_batch, n_batch, model, t, input_batch, latent_
     pred_x, pred_z, pred_params, z_0, z_0_loc, z_0_log_var, params, params_loc, params_log_var = model(
         input_batch, t=t, variational=True)
 
-    plot_samples(pred_x, input_batch)
+    # plot_samples(pred_x, input_batch)
 
 
     ## Calculate losses:
@@ -449,18 +449,18 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
     args = load_goku_train_config(args)
-    args.checkpoints_dir = args.checkpoints_dir + args.model + '/'
     args.save_path = os.path.join(args.save_path, args.model, args.run_id)
+    args.checkpoints_dir = args.save_path
 
     if args.model == 'pendulum':
-        args.data_path = 'data/noisy_pendulum/'
-        args.grounding_data_path = 'data/pure_pendulum/'
+        args.grounding_data_path = os.path.join(args.data_path, 'pure_pendulum/')
+        args.data_path = os.path.join(args.data_path, 'noisy_pendulum/')
     if args.model == 'double_pendulum':
-        args.data_path = 'data/noisy_double_pendulum/'
-        args.grounding_data_path = 'data/pure_double_pendulum/'
+        args.grounding_data_path = os.path.join(args.data_path, 'pure_double_pendulum/')
+        args.data_path = os.path.join(args.data_path, 'noisy_double_pendulum/')
     elif args.model == 'cvs':
-        args.data_path = 'data/noisy_cvs/'
-        args.grounding_data_path = 'data/pure_cvs/'
+        args.grounding_data_path = os.path.join(args.data_path, 'pure_cvs/')
+        args.data_path = os.path.join(args.data_path, 'noisy_cvs/')
 
     if not os.path.exists(args.checkpoints_dir):
         os.makedirs(args.checkpoints_dir)
