@@ -3,40 +3,44 @@ import gym
 import skimage.transform
 from tqdm import trange
 
+import matplotlib.pyplot as plt
+
 
 def preproc(X, side):
     """Crops, downsamples, desaturates, etc. the rgb pendulum observation."""
-    X = X[..., 0][440:, 150:-150] - X[..., 1][440:, 150:-150]
+    X = X[..., 0][130:, :] - X[..., 1][130:, :]
     return skimage.transform.resize(X, [int(side), side]) / 255.
 
 
 def dsdt(s, t, args):
     params = args
-    m1 = 1.0
+    m1 = params["m1"]
     m2 = params["m2"]
-    l1 = 1.0
-    lc1 = 0.5
-    lc2 = 0.5
-    I1 = 1.0
-    I2 = 1.0
+    l1 = params["l1"]
+    l2 = params["l2"]
     g = 9.8
-
-    a = 0.0
 
     theta1 = s[0]
     theta2 = s[1]
     dtheta1 = s[2]
     dtheta2 = s[3]
-    d1 = m1 * lc1 ** 2 + m2 * \
-         (l1 ** 2 + lc2 ** 2 + 2 * l1 * lc2 * np.cos(theta2)) + I1 + I2
-    d2 = m2 * (lc2 ** 2 + l1 * lc2 * np.cos(theta2)) + I2
-    phi2 = m2 * lc2 * g * np.cos(theta1 + theta2 - np.pi / 2.)
-    phi1 = - m2 * l1 * lc2 * dtheta2 ** 2 * np.sin(theta2) \
-           - 2 * m2 * l1 * lc2 * dtheta2 * dtheta1 * np.sin(theta2) \
-           + (m1 * lc1 + m2 * l1) * g * np.cos(theta1 - np.pi / 2) + phi2
-    ddtheta2 = (a + d2 / d1 * phi1 - m2 * l1 * lc2 * dtheta1 ** 2 * np.sin(theta2) - phi2) \
-               / (m2 * lc2 ** 2 + I2 - d2 ** 2 / d1)
-    ddtheta1 = -(d2 * ddtheta2 + phi1) / d1
+
+    ddtheta1 = ( -g*(2*m1+m2)*np.sin(theta1) - m2*g*np.sin(theta1-2*theta2) - 2*np.sin(theta1-theta2)*m2*(dtheta2**2*l2 + dtheta1**2*l1*np.cos(theta1-theta2)) ) / ( l1*(2*m1 + m2 - m2*np.cos(2*theta1-2*theta2)) ) 
+
+    ddtheta2 = ( 2*np.sin(theta1-theta2)*(dtheta1**2*l1*(m1+m2) + g*(m1+m2)*np.cos(theta1) + dtheta2**2*l2*m2*np.cos(theta1-theta2)) ) / ( l2*(2*m1 + m2 - m2*np.cos(2*theta1-2*theta2) ) )
+
+
+    # d1 = m1 * lc1 ** 2 + m2 * \
+    #      (l1 ** 2 + lc2 ** 2 + 2 * l1 * lc2 * np.cos(theta2)) + I1 + I2
+    # d2 = m2 * (lc2 ** 2 + l1 * lc2 * np.cos(theta2)) + I2
+    # phi2 = m2 * lc2 * g * np.cos(theta1 + theta2 - np.pi / 2.)
+    # phi1 = - m2 * l1 * lc2 * dtheta2 ** 2 * np.sin(theta2) \
+    #        - 2 * m2 * l1 * lc2 * dtheta2 * dtheta1 * np.sin(theta2) \
+    #        + (m1 * lc1 + m2 * l1) * g * np.cos(theta1 - np.pi / 2) + phi2
+    # ddtheta2 = (a + d2 / d1 * phi1 - m2 * l1 * lc2 * dtheta1 ** 2 * np.sin(theta2) - phi2) \
+    #            / (m2 * lc2 ** 2 + I2 - d2 ** 2 / d1)
+    # ddtheta1 = -(d2 * ddtheta2 + phi1) / d1
+
     return (dtheta1, dtheta2, ddtheta1, ddtheta2)
 
 
@@ -109,12 +113,18 @@ def step_env(args, env, params):
 
 
 def get_params():
+    m1 = np.random.uniform(1.0, 2.0)
     m2 = np.random.uniform(1.0, 2.0)
-    params = {"m2": m2}
+    l1 = np.random.uniform(1.0, 2.0)
+    l2 = np.random.uniform(1.0, 2.0)
+    params = {"m1": m1,
+              "m2": m2,
+              "l1": l1,
+              "l2": l2}
     return params
 
 
-def reset_env(env, min_angle=np.pi/10, max_angle=np.pi/6):
+def reset_env(env, min_angle=np.pi/10, max_angle=np.pi/2):
     state = np.random.uniform(low=min_angle, high=max_angle, size=(4,))
     env.state = state
     return state
@@ -134,6 +144,7 @@ def create_double_pendulum_data(args, side=32):
         params = get_params()
 
         for step in range(args.seq_len):
+
             processed_frame = preproc(env.render('rgb_array'), side)
 
             data[trial, step] = processed_frame

@@ -40,7 +40,44 @@ class ODEDataSet(Dataset):
             sample = self.transforms[transform](sample)
 
         return sample
+        
+class ParamDataSet(Dataset):
+    def __init__(self, file_path, ds_type):
+        # self.train = train
+        self.ds_type = ds_type
 
+        data_dict = torch.load(file_path)
+
+        self.keys = list(data_dict["train"].keys())
+
+        self.data = {}
+
+        if ds_type == 'train':
+            buffer = int(round(data_dict["train"][self.keys[0]].shape[0] * (1 - 0.1)))
+            for k in self.keys:
+                self.data[k] = torch.FloatTensor(data_dict["train"][k])[:buffer]
+
+        elif ds_type == 'val':
+            buffer = int(round(data_dict["train"][self.keys[0]].shape[0] * (1 - 0.1)))
+            for k in self.keys:
+                self.data[k] = torch.FloatTensor(data_dict["train"][k])[buffer:]
+
+        elif ds_type == 'test':
+            buffer = int(round(data_dict["test"][self.keys[0]].shape[0] * (1 - 0.1)))
+            for k in self.keys:
+                self.data[k] = torch.FloatTensor(data_dict["test"][k])[:buffer]
+
+    def __len__(self):
+        return self.data[self.keys[0]].size(0)
+
+    def __getitem__(self, idx):
+
+        sample = {}
+
+        for k in self.keys:
+            sample[k] = self.data[k][idx]
+
+        return sample
 
 class NormalizeZScore(object):
     """Normalize sample by mean and std."""

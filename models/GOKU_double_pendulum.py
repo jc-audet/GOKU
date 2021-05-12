@@ -18,25 +18,26 @@ class ODE(nn.Module):
         dtheta1 = z_t[:, 2]
         dtheta2 = z_t[:, 3]
 
-        m1 = 1.0
-        m2 = params[:, 0]
-        l1 = 1.0
-        lc1 = 0.5
-        lc2 = 0.5
-        I1 = 1.0
-        I2 = 1.0
+        m1 = params[:, 0]
+        m2 = params[:, 1]
+        l1 = params[:, 2]
+        l2 = params[:, 3]
         g = 9.8
 
-        d1 = m1 * lc1 ** 2 + m2 * \
-             (l1 ** 2 + lc2 ** 2 + 2 * l1 * lc2 * torch.cos(theta2)) + I1 + I2
+        ddtheta1 = ( -g*(2*m1+m2)*torch.sin(theta1) - m2*g*torch.sin(theta1-2*theta2) - 2*torch.sin(theta1-theta2)*m2*(dtheta2**2*l2 + dtheta1**2*l1*torch.cos(theta1-theta2)) ) / ( l1*(2*m1 + m2 - m2*torch.cos(2*theta1-2*theta2)) ) 
 
-        d2 = m2 * (lc2 ** 2 + l1 * lc2 * torch.cos(theta2)) + I2
-        phi2 = m2 * lc2 * g * torch.cos(theta1 + theta2 - pi / 2.)
-        phi1 = - m2 * l1 * lc2 * dtheta2 ** 2 * torch.sin(theta2) \
-               - 2 * m2 * l1 * lc2 * dtheta2 * dtheta1 * torch.sin(theta2) \
-               + (m1 * lc1 + m2 * l1) * g * torch.cos(theta1 - pi / 2) + phi2
-        ddtheta2 = (d2 / d1 * phi1 - phi2) / (m2 * lc2 ** 2 + I2 - d2 ** 2 / d1)
-        ddtheta1 = -(d2 * ddtheta2 + phi1) / d1
+        ddtheta2 = ( 2*torch.sin(theta1-theta2)*(dtheta1**2*l1*(m1+m2) + g*(m1+m2)*torch.cos(theta1) + dtheta2**2*l2*m2*torch.cos(theta1-theta2)) ) / ( l2*(2*m1 + m2 - m2*torch.cos(2*theta1-2*theta2) ) )
+
+
+        # d1 = m1 * lc1 ** 2 + m2 * \
+        #      (l1 ** 2 + lc2 ** 2 + 2 * l1 * lc2 * torch.cos(theta2)) + I1 + I2
+        # d2 = m2 * (lc2 ** 2 + l1 * lc2 * torch.cos(theta2)) + I2
+        # phi2 = m2 * lc2 * g * torch.cos(theta1 + theta2 - pi / 2.)
+        # phi1 = - m2 * l1 * lc2 * dtheta2 ** 2 * torch.sin(theta2) \
+        #        - 2 * m2 * l1 * lc2 * dtheta2 * dtheta1 * torch.sin(theta2) \
+        #        + (m1 * lc1 + m2 * l1) * g * torch.cos(theta1 - pi / 2) + phi2
+        # ddtheta2 = (d2 / d1 * phi1 - phi2) / (m2 * lc2 ** 2 + I2 - d2 ** 2 / d1)
+        # ddtheta1 = -(d2 * ddtheta2 + phi1) / d1
 
         dxdt = torch.stack((dtheta1, dtheta2, ddtheta1, ddtheta2), dim=1)
         dxdt = torch.cat((dxdt, torch.zeros_like(params)), dim=1)
@@ -104,7 +105,7 @@ class Decoder(nn.Module):
         self.ode_method = ode_method
         self.ode_solver = ODE()
         self.ode_dim = 4
-        self.params_dim = 1
+        self.params_dim = 4
 
         # Latent vector to ODE input vector
         self.latent_to_hidden_z0 = nn.Linear(latent_dim, 200)
@@ -146,6 +147,9 @@ class Decoder(nn.Module):
         recon_batch = self.sigmoid(self.fourth_layer(recon_batch))
         recon_batch = recon_batch.view(predicted_z.size(0), predicted_z.size(1), self.input_dim[0], self.input_dim[1])
 
-        params_batch = {"m2": params_batch[:, 0]}
+        params_batch = {"m1": params_batch[:, 0],
+                        "m2": params_batch[:, 1],
+                        "l1": params_batch[:, 2],
+                        "l2": params_batch[:, 3]}
 
         return recon_batch, predicted_z, params_batch

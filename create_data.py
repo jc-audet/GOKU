@@ -66,18 +66,18 @@ def make_dataset(args):
         test_params_data = {key: np.array([sample[key] for sample in test_params_data]) for key in test_params_data[0]}
 
         data_norm_params = find_norm_params(noisy_train_data)
-        torch.save(train_params_data, args.output_dir + 'train_params_data.pkl')
-        torch.save(test_params_data, args.output_dir + 'test_params_data.pkl')
-        torch.save(train_latent_data, args.output_dir + 'train_latent_data.pkl')
-        torch.save(test_latent_data, args.output_dir + 'test_latent_data.pkl')
-        torch.save(data_norm_params, args.output_dir + 'data_norm_params.pkl')
-        torch.save(test_data, args.output_dir + 'gt_test_data.pkl')
+        torch.save(train_params_data, args.save_path + 'train_params_data.pkl')
+        torch.save(test_params_data, args.save_path + 'test_params_data.pkl')
+        torch.save(train_latent_data, args.save_path + 'train_latent_data.pkl')
+        torch.save(test_latent_data, args.save_path + 'test_latent_data.pkl')
+        torch.save(data_norm_params, args.save_path + 'data_norm_params.pkl')
+        torch.save(test_data, args.save_path + 'gt_test_data.pkl')
 
     else:
-        train_latent_data = torch.load(args.output_dir + 'train_latent_data.pkl')
-        test_latent_data = torch.load(args.output_dir + 'test_latent_data.pkl')
+        train_latent_data = torch.load(args.save_path + 'train_latent_data.pkl')
+        test_latent_data = torch.load(args.save_path + 'test_latent_data.pkl')
 
-        dataset_dict = torch.load(args.output_dir + 'processed_data.pkl')
+        dataset_dict = torch.load(args.save_path + 'processed_data.pkl')
         noisy_train_data = dataset_dict['train']
         noisy_test_data = dataset_dict['test']
 
@@ -91,12 +91,20 @@ def make_dataset(args):
                       'train_latent_mask': train_latent_mask,
                       'test_latent': test_latent_data * test_latent_mask,
                       'test_latent_mask': test_latent_mask}
+                
+    unmasked_grounding_data = { 'train': train_latent_data,
+                                'test': test_latent_data}
 
-    torch.save(dataset_dict, args.output_dir + 'processed_data.pkl')
-    torch.save(grounding_data, args.output_dir + 'grounding_data.pkl')
+    unmasked_param_data = { 'train': train_params_data,
+                            'test': test_params_data}
+
+    torch.save(dataset_dict, args.save_path + 'processed_data.pkl')
+    torch.save(grounding_data, args.save_path + 'grounding_data.pkl')
+    torch.save(unmasked_grounding_data, args.save_path + 'unmasked_grounding_data.pkl')
+    torch.save(unmasked_param_data, args.save_path + 'unmasked_param_data.pkl')
 
     args_dict = {'mask_rate': args.mask_rate, 'noise_std': args.noise_std, 'model': args.model}
-    torch.save(args_dict, args.output_dir + 'data_args.pkl')
+    torch.save(args_dict, args.save_path + 'data_args.pkl')
 
 
 if __name__ == '__main__':
@@ -112,8 +120,11 @@ if __name__ == '__main__':
     parser.add_argument('--friction', action='store_true')
     parser.add_argument('--seed', type=int, default=12)
 
+    parser.add_argument('--grounding-setup',  action='store_true')
+
     args = parser.parse_args()
 
+    ## Get function
     if args.model == 'cvs':
         args.create_raw_data = create_cvs_data
     elif args.model == 'pendulum':
@@ -121,10 +132,61 @@ if __name__ == '__main__':
     elif args.model == 'double_pendulum':
         args.create_raw_data = create_double_pendulum_data
 
-    args = load_data_config(args)
 
-    if not os.path.exists(args.output_dir):
-        os.makedirs(args.output_dir)
+    if args.grounding_setup:
 
-    set_seed(args.seed)
-    make_dataset(args)
+        ########################################################
+        ## Create pure dataset for artificial grounding
+
+        pure_args = load_data_config(args)
+
+        if args.model == 'pendulum':
+            args.save_path = os.path.join(args.output_dir, 'pure_pendulum') if not args.friction else os.path.join(args.output_dir, 'pure_pendulum_friction')
+        else:
+            args.save_path = os.path.join(args.output_dir, 'pure_' + args.model)
+
+        args.seed = args.seed
+        
+        # Change size
+        args.data_size = 50
+        # Make it noise-less
+        args.noise_std = 0.0
+
+
+        if not os.path.exists(args.save_path):
+            os.makedirs(args.save_path)
+
+        set_seed(args.seed)
+        make_dataset(args)
+
+        ################################################
+        ## Create noisy dataset for traditionnal training
+        noisy_args = load_data_config(args)
+
+        if args.model == 'pendulum':
+            args.save_path = os.path.join(args.output_dir, 'noisy_pendulum') if not args.friction else os.path.join(args.output_dir, 'noisy_pendulum_friction')
+        else:
+            args.save_path = os.path.join(args.output_dir, 'noisy_' + args.model)
+            
+        # Change size
+        args.data_size = 500
+        # Make it noisy
+        args.noise_std = 0.0002
+        
+        # Change the seed
+        args.seed = args.seed + 1
+
+        if not os.path.exists(args.save_path):
+            os.makedirs(args.save_path)
+
+        set_seed(args.seed)
+        make_dataset(args)
+    else:
+
+        args = load_data_config(args)
+
+        if not os.path.exists(args.output_dir):
+            os.makedirs(args.output_dir)
+
+        set_seed(args.seed)
+        make_dataset(args)
